@@ -1,0 +1,145 @@
+---
+title: "Construction d'applis web avec shiny"
+author: "Anne De Moliner"
+date: "2 novembre 2020"
+output: word_document
+always_allow_html: yes
+---
+
+
+```{r setup, include=FALSE, warning = FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE)
+```
+
+
+
+## Objectif
+
+Dans ce td, on va utiliser un jeu de données de consommations d'électricité annuelles en France par département. Il est disponible en open data sur le site de Enedis :
+https://data.enedis.fr/explore/ 
+Il  a déjà été nettoyé et posé dans le dossier data.
+
+
+
+
+
+```{r}
+consos_clean <- readRDS('data/consos_clean.RDS')
+summary(consos_clean[,1:10])
+```
+
+A partir du jeu de données de consommations d'électricité en France par département `consos.RDS`, construisez une application shiny de visualisation.
+
+Cet onglet comportera trois onglets décrits plus bas : 
+
+- **mon département** : analyse des données d'un département et comparaison avec les autres départements de la région
+
+- **analyse de la conso résidentielle**: on réalise des statistiques descriptives sur les consommations moyennes résidentielles en fonction de différentes variables explicatives.
+
+- **cartographie** : construction d'une choroplet des données par région, pour une variable au choix
+
+
+*Conseil: Procéder onglet par onglet, commencer par l'ui et ensuite coder le server associé. *
+
+
+
+
+
+## Premier onglet : mon département
+
+Cet onglet permet de visualiser les infos d'un département, et de la comparer aux autres
+départements de la région. 
+
+- Afficher un titre qui contient le nom du département 
+
+-  Remplacer la table toute moche par une data table 
+- Rajouter la sélection d'une ou plusieurs années et filtrer la table en conséquence
+
+
+- Affichage de la répartition totale des consommations entre les différents secteurs, année par année (graphique dynamique ou statique, au choix). 
+
+- Affichage de la courbe d'évolution des consommations totales par secteur pour le département (dynamique ou statique, au choix)
+
+- Affichage d'un boxplot des consommations moyennes, par secteur d'activité, pour les départements de la région, et tracé d'un point rouge pour le département (graphique statique ou dynamique, au choix). 
+
+
+
+ *Bonus : rajouter un bouton de téléchargement permettant de télécharger les données de son département.*
+ 
+ *Bonus 2: Rajouter une interface dynamique où on choisit d'abord la région puis le département dans la région.*
+ 
+ *Bonus 3: Refaire en dashboard et rajouter des valuebox avec  pour les valeurs des consos totales résidentielles, professionnnelles et entreprises en MWh et en pourcentage du total.* 
+ 
+ 
+Exemple de ce qu'on peut obtenir
+
+![](img/macommune1.png)
+
+
+![](img/macommune2.png)
+
+
+
+## Deuxième onglet : explication de la consommation résidentielle 
+
+Cet onglet comporte une analyse des déterminants de la consommation d'électricité résidentielle.  On travaille sur le jeu de données `consos`
+
+Pour cela, on propose d'afficher la densité de la variable `conso_moyenne_residentiel_mwh_` en fonction de différentes variables explicatives catégorielles ( l'année, le département)
+
+
+On peut également afficher des scatterplots de la variable d'intérêt en fonction des variables explicatives quantitatives : superficie des logements par tranche, taux de résidences principales, taux de chauffage électrique, taux de logements collectifs, nombre d'habitants
+Sur ces scatterplots, la couleur des points pourra dépendre d'une des variables qualitatives précédentes. 
+
+
+
+
+
+
+
+
+Pour cet onglet, les inputs sont : 
+
+- variable qualitative d'intérêt (unique, à choisir dans une liste)
+
+- variable quantitative d'intérêt (unique, à choisir dans une liste)
+
+
+Exemples d'interface:
+
+![](img/analyse_resid1.png)
+
+
+![](img/analyse_resid2.png)
+
+
+* Bonus : rajouter un bouton cliquable qui lance les calculs*
+
+
+## Troisième onglet : cartographie des consommations maille régionale
+
+
+![](img/carto.png)
+
+
+Afficher une choroplet dont la couleur dépend de la valeur des différentes variables, à la maille des régions. On sélectionnera une période et on fera une moyenne sur la période qui nous intéresse 
+
+Le fichier des frontières de régions en shapefile s'appelle `regions-20180101.shp`.
+Vous pouvez le télécharger par exemple ici: https://www.data.gouv.fr/fr/datasets/contours-des-regions-francaises-sur-openstreetmap/
+
+
+Pour l'importer ensuite :
+
+```{r eval=FALSE, message=FALSE, warning=FALSE}
+library(sf)
+
+france <- st_read('data/regions-20180101-shp') 
+```
+
+Pour cet onglet, les inputs sont : 
+
+- variable quantitative d'intérêt (unique, à choisir dans une liste)
+
+- période d'intérêt (année de début, année de fin)
+
+
+*Super Bonus : récupérer les clics sur la carte et afficher des valuebox avec les mêmes valeurs que dans l'onget 1 pour la région correspondante*
