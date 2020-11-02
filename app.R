@@ -27,10 +27,14 @@ ui <- dashboardPage(
   
   dashboardSidebar(
     # Choix du département 
-    selectInput("dep",
-                "Choisissez votre departement:",
-                choices = levels(consos$nom_departement),
-                selected = 'Doubs'),
+    selectInput("region",
+                "Choisissez votre region:",
+                choices = unique(consos$nom_region),
+                selected = 'Bretagne'),
+    
+    
+    ##ui conditionnelle
+    uiOutput('ui_departement'),
     # Choix de l'année 
     selectInput("annee",
                 "Choisissez votre année:",
@@ -73,10 +77,28 @@ server <- function(input, output) {
   
   output$nom_dep <- renderText({input$dep})
   
-  # Cette fonction filtre le jeu de données entier
-  # pour ne garder que ce qui est intéressant
+
+  # Ui interactive de departement qui choisit parmi la region 
   
   
+  output$ui_departement <-  renderUI({
+    
+    
+    ##selectionner les bons departements
+    choix_possibles <- consos %>% 
+      filter(nom_region == input$region) %>%
+      pull(nom_departement) %>%
+      unique()
+    
+    selectInput("dep",
+        "Choisissez votre departement:",
+        choices = choix_possibles,
+        selected = choix_possibles[1])
+  })
+    
+    # Cette fonction filtre le jeu de données entier
+    # pour ne garder que ce qui est intéressant
+    
   filtre <- reactive({
     ##TODO: rajouter aussi un filtre sur les annees
     out <- consos %>% 

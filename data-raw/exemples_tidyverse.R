@@ -1,6 +1,16 @@
 ##exemples d utilisation du tidyverse
 library(tidyverse)
+
+
+
 consos <- readRDS('data/consos_clean.RDS')
+
+
+input <- list(region = 'Bretagne')
+
+choix_possibles <- consos %>% filter(nom_region == input$region) %>%
+  pull(nom_departement) %>% unique()
+
 ##select : selectionner des colonnes
 consos %>% select(conso_totale_residentiel_mwh_,conso_totale_professionnel_mwh_) %>%
   head()
