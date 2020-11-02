@@ -1,6 +1,8 @@
 # libraries
 library(shiny)
 library(dplyr)
+library(shinydashboard)
+library(DT)
 
 
 # Preparation des données -------------------------------------------------
@@ -15,34 +17,33 @@ consos <- readRDS('data/consos_clean.RDS')
 
 
 # Define UI for application that draws a histogram
-ui <- navbarPage(
-  'Analyses des consommations electriques',
+ui <- dashboardPage(
+  dashboardHeader(title="Analyses des consommations electriques"),
   
   tabPanel('Mon département',
            id = 'departements',
   
 
 
-  sidebarLayout(
+  dashboardSidebar(
     sidebarPanel(
       
-      # Choix du département 
-      # TODO: choix parmi toutes les possibilités
+    # Choix du département 
       selectInput("dep",
                   "Choisissez votre departement:",
-                  choices = c('Doubs','Nord','Paris'),
+                  choices = levels(consos$nom_departement),
                   selected = 'Doubs')
     ),
     
     # Choix de l'année 
-    ###TODO
+  
     
     mainPanel(
       ##affichage du nom du departement
       h3(textOutput('nom_dep')),
       
       ####TODO: remplacer par la table par un datatable 
-      tableOutput('ma_table')
+      dashboardBody(h5('DataTable'), dataTableOutput('ma_table'))
       
     )
     
@@ -69,10 +70,7 @@ ui <- navbarPage(
 # Define server logic required to draw a histogram
 server <- function(input, output) {
   
-  output$nom_dep <- renderText({
-    ##TODO: modifier pour afficher le nom du departement!!!!
-    'ANALYSE DU DEPARTEMENT TODO'
-  })
+  output$nom_dep <- renderText({input$dep})
   
   # Cette fonction filtre le jeu de données entier
   # pour ne garder que ce qui est intéressant
@@ -87,7 +85,7 @@ server <- function(input, output) {
   ##Creation de la table a afficher
   ##TODO : remplacer par un datatable (dans server et ui)
   ##TODO: prendre toute la table et pas les six premieres lignes 
-   output$ma_table <- renderTable({
+   output$ma_table <- renderDataTable({
    out <-  filtre() %>%
      select(- contains('superficie'),
             - contains('residences'),
