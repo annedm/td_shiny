@@ -24,19 +24,20 @@ ui <- dashboardPage(
   ),
   
   dashboardSidebar(
-    sidebarPanel(
       # Choix du département 
       selectInput("dep",
                   "Choisissez votre departement:",
                   choices = levels(consos$nom_departement),
                   selected = 'Doubs')
-    )
       # Choix de l'année 
+      selectInput("annee",
+                  "Choisissez votre année:",
+                  choices = levels(consos$annee),
+                  selected = '2015')
   ),
   
   dashboardBody(
-    h5('DataTable'), 
-    h3(textOutput('nom_dep'), dataTableOutput('ma_table'))
+    h5(textOutput('nom_dep'), dataTableOutput('ma_table'))
   )
   ##TODO : répartition des consos par secteur et année
   ##TODO: évolution des consos par secteur au cours du temps
@@ -67,7 +68,8 @@ server <- function(input, output) {
   filtre <- reactive({
     ##TODO: rajouter aussi un filtre sur les annees
     consos %>% 
-      filter(nom_departement == input$dep)
+      filter(nom_departement == input$dep) %>%
+      filter(annee == input$annee)
   })
   
   ##Creation de la table a afficher
