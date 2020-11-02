@@ -18,49 +18,37 @@ consos <- readRDS('data/consos_clean.RDS')
 
 # Define UI for application that draws a histogram
 ui <- dashboardPage(
-  dashboardHeader(title="Analyses des consommations electriques"),
   
-  tabPanel('Mon département',
-           id = 'departements',
+  dashboardHeader(
+    title="Analyses des consommations electriques"
+  ),
   
-
-
   dashboardSidebar(
     sidebarPanel(
-      
-    # Choix du département 
+      # Choix du département 
       selectInput("dep",
                   "Choisissez votre departement:",
                   choices = levels(consos$nom_departement),
                   selected = 'Doubs')
-    ),
-    
-    # Choix de l'année 
-  
-    
-    mainPanel(
-      ##affichage du nom du departement
-      h3(textOutput('nom_dep')),
-      
-      ####TODO: remplacer par la table par un datatable 
-      dashboardBody(h5('DataTable'), dataTableOutput('ma_table'))
-      
     )
-    
-    ##TODO : répartition des consos par secteur et année
-    
-    ##TODO: évolution des consos par secteur au cours du temps
-    
+      # Choix de l'année 
+  ),
+  
+  dashboardBody(
+    h5('DataTable'), 
+    h3(textOutput('nom_dep'), dataTableOutput('ma_table'))
   )
-  
-  ) ###fin du premier onglet
-  
+  ##TODO : répartition des consos par secteur et année
+  ##TODO: évolution des consos par secteur au cours du temps
+) 
+
+
+
   
   #####TODO: rajouter les onglets suivants :
   #####Analyse des determinants de la conso
   #####Cartographie
   
-)
 
 
 
