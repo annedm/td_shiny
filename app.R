@@ -49,9 +49,10 @@ ui <- dashboardPage(
     
     # courbes des evolutions des differents secteurs
     ,plotOutput('evolution')
-  )
-  ##TODO : répartition des consos par secteur et année
-  ##TODO: évolution des consos par secteur au cours du temps
+    
+    #le boxplot des consos moyennes des departements de la region
+    ,plotOutput('boxplot_conso_moyenne')
+  )  
 ) 
 
 
@@ -94,6 +95,29 @@ server <- function(input, output) {
     
   })
   
+  
+  get_departement_region <- reactive({
+    
+    ##recuperer la region
+    region <- consos %>% 
+      filter(nom_departement == input$dep) %>%
+      filter(annee %in% input$annee)  %>%
+      distinct(annee, nom_region)
+    
+    ##recuperer tous les autres departemetns de la meme region 
+    consos_region <- consos %>%
+      inner_join(region, by = c('annee',"nom_region"))
+    
+    ##selectionner seulement l'annee, le dep et les consos moyennes
+    consos_region <- consos_region %>%
+      select(annee, nom_departement, contains('conso_moyenne'))
+    
+     
+    print(head(consos_region))
+     consos_region
+    
+  })
+  
   ##Creation de la table a afficher
   
   
@@ -132,6 +156,31 @@ server <- function(input, output) {
     
     
     fig
+  })
+  
+  ###boxplot des consos moyennes
+  output$boxplot_conso_moyenne <- renderPlot({
+    
+    
+    df <- get_departement_region() %>%
+      pivot_longer(-c("annee", "nom_departement")) %>%
+      mutate(annee = as.character(annee),
+             name = str_replace(name, pattern = 'conso_moyenne_', rep = '') %>%
+               str_replace(pattern = 'mwh_', rep = '')
+               )  
+      
+    
+    
+    ggplot(df) +
+      geom_boxplot() + 
+      facet_wrap(~ name  , scales = 'free') +
+      aes(y = value,   x = annee,  fill = annee)+
+      theme(legend.position = 'bottom' ) + 
+      ggtitle('Le titre') + 
+      ylab('les ordonneees') + 
+      xlab('les abscisse')
+    
+    
   })
 }
 
