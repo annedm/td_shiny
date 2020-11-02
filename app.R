@@ -3,6 +3,7 @@ library(shiny)
 library(dplyr)
 library(shinydashboard)
 library(DT)
+library(tidyverse)
 
 
 # Preparation des données -------------------------------------------------
@@ -24,20 +25,25 @@ ui <- dashboardPage(
   ),
   
   dashboardSidebar(
-      # Choix du département 
-      selectInput("dep",
-                  "Choisissez votre departement:",
-                  choices = levels(consos$nom_departement),
-                  selected = 'Doubs')
-      # Choix de l'année 
-      selectInput("annee",
-                  "Choisissez votre année:",
-                  choices = levels(consos$annee),
-                  selected = '2015')
+    # Choix du département 
+    selectInput("dep",
+                "Choisissez votre departement:",
+                choices = levels(consos$nom_departement),
+                selected = 'Doubs'),
+    # Choix de l'année 
+    selectInput("annee",
+                "Choisissez votre année:",
+                choices = sort(unique(consos$annee)),
+                multiple = TRUE,
+                selected = '2015')
   ),
   
   dashboardBody(
-    h5(textOutput('nom_dep'), dataTableOutput('ma_table'))
+    h5(textOutput('nom_dep')
+       , dataTableOutput('ma_table',width = "40%"))
+    
+    
+    , plotOutput('repartition')
   )
   ##TODO : répartition des consos par secteur et année
   ##TODO: évolution des consos par secteur au cours du temps
@@ -45,11 +51,11 @@ ui <- dashboardPage(
 
 
 
-  
-  #####TODO: rajouter les onglets suivants :
-  #####Analyse des determinants de la conso
-  #####Cartographie
-  
+
+#####TODO: rajouter les onglets suivants :
+#####Analyse des determinants de la conso
+#####Cartographie
+
 
 
 
@@ -64,27 +70,45 @@ server <- function(input, output) {
   # Cette fonction filtre le jeu de données entier
   # pour ne garder que ce qui est intéressant
   
-
+  
   filtre <- reactive({
     ##TODO: rajouter aussi un filtre sur les annees
     consos %>% 
       filter(nom_departement == input$dep) %>%
-      filter(annee == input$annee)
+      filter(annee %in% input$annee)
   })
   
   ##Creation de la table a afficher
   ##TODO : remplacer par un datatable (dans server et ui)
   ##TODO: prendre toute la table et pas les six premieres lignes 
-   output$ma_table <- renderDataTable({
-   out <-  filtre() %>%
-     select(- contains('superficie'),
-            - contains('residences'),
-            - contains('taux')
-            ,- contains('geos'))
-   print(out)
-   out
+  output$ma_table <- renderDataTable({
+    out <-  filtre() %>%
+      select(annee,  conso_totale_residentiel_mwh_,
+             conso_totale_professionnel_mwh_,
+             conso_totale_agriculture_mwh_,
+             conso_totale_tertiaire_mwh_,
+             conso_totale_autres_mwh_)
+    #print(out)
+    out
   } )
+ 
   
+output$repartition <- renderPlot({
+  
+  df_filtre <- filtre() %>%
+    select(annee,  conso_totale_residentiel_mwh_,
+           conso_totale_professionnel_mwh_,
+           conso_totale_agriculture_mwh_,
+           conso_totale_tertiaire_mwh_,
+           conso_totale_autres_mwh_) %>%
+    tidyr::pivot_longer(-c("annee"))
+  
+  
+  ggplot(df_filtre) +
+    geom_bar(stat = 'identity') +
+    aes(y  = value, x = annee, fill = name)
+  
+}) 
 }
 
 
