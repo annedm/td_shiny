@@ -11,8 +11,13 @@ library(plotly)
 
 consos <- readRDS('data/consos_clean.RDS')
 
-##Consos mailles régionales pour l onglet regions
+# variables quali d'interet dans le deuxieme onglet
+var_quali <- c('nom_region','annee', 'nom_departement')
+# variables quanti d'interet dans le deuxieme onglet
+var_quanti <-colnames(consos)[c(1,21,30:46)]
 
+
+#pour pouvoir faire des tests (a virer)
 #input <- list(dep = 'Doubs', annee = 2011:2017)
 
 # ui ----------------------------------------------------------------------
@@ -26,6 +31,12 @@ ui <- dashboardPage(
   ),
   
   dashboardSidebar(
+    
+    sidebarMenu(
+      menuItem("Département", tabName = "departement"),
+      menuItem("Analyse résidentielle", tabName = "resid")
+    ),
+    
     # Choix du département 
     selectInput("region",
                 "Choisissez votre region:",
@@ -40,24 +51,56 @@ ui <- dashboardPage(
                 "Choisissez votre année:",
                 choices = sort(unique(consos$annee)),
                 multiple = TRUE,
-                selected = sort(unique(consos$annee)))
+                selected = sort(unique(consos$annee))),
+    
+    
+    ###les inputs du second onglet
+    selectInput('var_qual',
+                'Variable qualitative',
+                choices = var_quali,
+                selected = var_quali[1]),
+    
+    selectInput('var_quant',
+                'Variable quantitative',
+                choices = var_quanti,
+                selected = var_quanti[1]),
+    
+    ##action button 
+    actionButton(inputId = 'action','Lancer l analyse')
+    
   ),
   
   dashboardBody(
-    h5(textOutput('nom_dep')
-       , dataTableOutput('ma_table',width = "40%"))
+    tabItems(
+      #Premier onglet : mon departement
+      tabItem('departement',
+      h5(textOutput('nom_dep')
+         , dataTableOutput('ma_table',width = "40%"))
+      
+      
+      # barplots des repartition par secteur et par an 
+      , plotOutput('repartition')
+      
+      # courbes des evolutions des differents secteurs
+      ,plotOutput('evolution')
+      
+      #le boxplot des consos moyennes des departements de la region
+      ,plotOutput('boxplot_conso_moyenne')
+      
+      ),
+      #Deuxieme onglet: analyse residentielle
+      tabItem('resid',
+              h5('Analyse des déterminants des consommations résidentielles'),
+              
+              plotOutput('densites'),
+              plotOutput('scatterplots')
+              
+              )
+      
+    )#tabitems
     
-    
-    # barplots des repartition par secteur et par an 
-    , plotOutput('repartition')
-    
-    # courbes des evolutions des differents secteurs
-    ,plotOutput('evolution')
-    
-    #le boxplot des consos moyennes des departements de la region
-    ,plotOutput('boxplot_conso_moyenne')
-  )  
-) 
+  )   #dashboardbody
+)  #shinydashboards
 
 
 
@@ -74,7 +117,12 @@ ui <- dashboardPage(
 
 # Define server logic required to draw a histogram
 server <- function(input, output) {
+
   
+
+# Premier onglet: analyse du departement ----------------------------------
+
+    
   output$nom_dep <- renderText({input$dep})
   
 
@@ -184,7 +232,7 @@ server <- function(input, output) {
   output$boxplot_conso_moyenne <- renderPlot({
     
     
-    df <- get_departement_region() %>%
+    df_reg <- get_departement_region() %>%
       pivot_longer(-c("annee", "nom_departement")) %>%
       mutate(annee = as.character(annee),
              name = str_replace(name, pattern = 'conso_moyenne_', rep = '') %>%
@@ -193,17 +241,71 @@ server <- function(input, output) {
       
     
     
-    ggplot(df) +
-      geom_boxplot() + 
+    ggplot() +
+      geom_boxplot(data = df_reg,
+                   aes(y = value,   x = annee)) + 
+      geom_point(data = df_reg %>% 
+                  filter(nom_departement == input$dep),
+                aes(y = value, x = annee),
+                col = 'red'
+                ) +
+      
       facet_wrap(~ name  , scales = 'free') +
-      aes(y = value,   x = annee,  fill = annee)+
+      
+      theme_bw() + 
       theme(legend.position = 'bottom' ) + 
       ggtitle('Le titre') + 
       ylab('les ordonneees') + 
       xlab('les abscisse')
+  })
+    
+    
+
+# Deuxieme onglet : analyse des residentiels ------------------------------
+  ##filtre sur les annees, bouge seuleemnt quand appui sur go
+
+  graphe_densite <- eventReactive(input$action,{
+    
+    print(input$var_qual)
+    ##densite selon une variable quali 
+    a_tracer <- consos %>% 
+             filter(annee %in% input$annee)%>%
+      mutate_at(input$var_qual, as.factor)
+    
+    
+    
+    ggplot(a_tracer)+
+      aes_string( 'conso_moyenne_residentiel_mwh_',
+                  colour = input$var_qual)+
+      geom_density( )+
+      ggtitle(paste0('conso moyenne residentielle selon ',
+                     input$var_qual))+
+      theme_bw() +
+      theme(legend.position = 'bottom')
     
     
   })
+  output$densites <- renderPlot({
+    graphe_densite()
+  })
+    
+  output$scatterplots <- renderPlot({
+    
+    #scatterplot selon une variable quanto
+    
+    ggplot(consos %>% 
+             filter(annee %in% input$annee))+
+      aes_string( y = 'conso_moyenne_residentiel_mwh_',
+                  colour = input$var_qual,
+                  x = input$var_quant)+
+      geom_point( )+
+      ggtitle(paste0('conso moyenne residentielle selon ',
+                     input$var_quant, 'et ', input$var_qual))+
+      theme_bw() +
+      theme(legend.position = 'bottom')
+  })
+    
+
 }
 
 
