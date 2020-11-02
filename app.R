@@ -1,6 +1,10 @@
 # libraries
 library(shiny)
 library(dplyr)
+library(shinydashboard)
+library(DT)
+library(tidyverse)
+library(plotly)
 
 
 # Preparation des données -------------------------------------------------
@@ -9,57 +13,54 @@ consos <- readRDS('data/consos_clean.RDS')
 
 ##Consos mailles régionales pour l onglet regions
 
-
+#input <- list(dep = 'Doubs', annee = 2011:2017)
 
 # ui ----------------------------------------------------------------------
 
 
 # Define UI for application that draws a histogram
-ui <- navbarPage(
-  'Analyses des consommations electriques',
+ui <- dashboardPage(
   
-  tabPanel('Mon département',
-           id = 'departements',
+  dashboardHeader(
+    title="Analyses des consommations electriques"
+  ),
   
-
-
-  sidebarLayout(
-    sidebarPanel(
-      
-      # Choix du département 
-      # TODO: choix parmi toutes les possibilités
-      selectInput("dep",
-                  "Choisissez votre departement:",
-                  choices = c('Doubs','Nord','Paris'),
-                  selected = 'Doubs')
-    ),
-    
+  dashboardSidebar(
+    # Choix du département 
+    selectInput("dep",
+                "Choisissez votre departement:",
+                choices = levels(consos$nom_departement),
+                selected = 'Doubs'),
     # Choix de l'année 
-    ###TODO
+    selectInput("annee",
+                "Choisissez votre année:",
+                choices = sort(unique(consos$annee)),
+                multiple = TRUE,
+                selected = sort(unique(consos$annee)))
+  ),
+  
+  dashboardBody(
+    h5(textOutput('nom_dep')
+       , dataTableOutput('ma_table',width = "40%"))
     
-    mainPanel(
-      ##affichage du nom du departement
-      h3(textOutput('nom_dep')),
-      
-      ####TODO: remplacer par la table par un datatable 
-      tableOutput('ma_table')
-      
-    )
     
-    ##TODO : répartition des consos par secteur et année
+    # barplots des repartition par secteur et par an 
+    , plotOutput('repartition')
     
-    ##TODO: évolution des consos par secteur au cours du temps
-    
+    # courbes des evolutions des differents secteurs
+    ,plotOutput('evolution')
   )
-  
-  ) ###fin du premier onglet
-  
-  
-  #####TODO: rajouter les onglets suivants :
-  #####Analyse des determinants de la conso
-  #####Cartographie
-  
-)
+  ##TODO : répartition des consos par secteur et année
+  ##TODO: évolution des consos par secteur au cours du temps
+) 
+
+
+
+
+#####TODO: rajouter les onglets suivants :
+#####Analyse des determinants de la conso
+#####Cartographie
+
 
 
 
@@ -69,34 +70,69 @@ ui <- navbarPage(
 # Define server logic required to draw a histogram
 server <- function(input, output) {
   
-  output$nom_dep <- renderText({
-    ##TODO: modifier pour afficher le nom du departement!!!!
-    'ANALYSE DU DEPARTEMENT TODO'
-  })
+  output$nom_dep <- renderText({input$dep})
   
   # Cette fonction filtre le jeu de données entier
   # pour ne garder que ce qui est intéressant
   
-
+  
   filtre <- reactive({
     ##TODO: rajouter aussi un filtre sur les annees
-    consos %>% 
-      filter(nom_departement == input$dep)
+    out <- consos %>% 
+      filter(nom_departement == input$dep) %>%
+      filter(annee %in% input$annee)
+    
+    ##ne garder que les colonnes qui nous interessent
+    out <-  out %>%
+      select(annee,  conso_totale_residentiel_mwh_,
+             conso_totale_professionnel_mwh_,
+             conso_totale_agriculture_mwh_,
+             conso_totale_tertiaire_mwh_,
+             conso_totale_autres_mwh_)
+    
+    out 
+    
   })
   
   ##Creation de la table a afficher
-  ##TODO : remplacer par un datatable (dans server et ui)
-  ##TODO: prendre toute la table et pas les six premieres lignes 
-   output$ma_table <- renderTable({
-   out <-  filtre() %>%
-     select(- contains('superficie'),
-            - contains('residences'),
-            - contains('taux')
-            ,- contains('geos'))
-   print(out)
-   out
+  
+  
+  output$ma_table <- renderDataTable({
+    out <-  filtre() %>%
+      mutate_all(list(round)) %>%
+      rename_all(list(str_replace), pattern= 'conso_totale_', replacement = '')
+    #print(out)
+    out
   } )
   
+  ##barplots par annee, couleurs par secteur d'activite
+  output$repartition <- renderPlot({
+    
+    df_filtre <- filtre()  %>%
+      tidyr::pivot_longer(-c("annee"))
+    
+    
+    ggplot(df_filtre) +
+      geom_bar(stat = 'identity') +
+      aes(y  = value, x = annee, fill = name)
+    
+  }) 
+  
+  ##graphique des courbes 
+  output$evolution <- renderPlot({
+    df <- filtre() %>%
+      tidyr::pivot_longer(-c("annee"))
+    
+    
+    fig <- ggplot(  df) + 
+      aes(y = value, x = annee, color = name)+
+      geom_line() + 
+      theme_bw()+
+      theme(legend.position = 'bottom')
+    
+    
+    fig
+  })
 }
 
 
