@@ -90,7 +90,7 @@ ui <- dashboardPage(
       ),
       #Deuxieme onglet: analyse residentielle
       tabItem('resid',
-              h5('Analyse des déterminants des consommations résidentielles'),
+              h1('Analyse des déterminants des consommations résidentielles'),
               
               plotOutput('densites'),
               plotOutput('scatterplots')
@@ -255,8 +255,8 @@ server <- function(input, output) {
       theme_bw() + 
       theme(legend.position = 'bottom' ) + 
       ggtitle('Le titre') + 
-      ylab('les ordonneees') + 
-      xlab('les abscisse')
+      ylab('consommations moyennes') + 
+      xlab('annees')
   })
     
     
